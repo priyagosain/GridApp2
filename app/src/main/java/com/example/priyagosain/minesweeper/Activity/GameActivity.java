@@ -57,17 +57,16 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         editor.commit();
         setContentView(R.layout.activity_game);
         bestScoreDisplay = (TextView) this.findViewById(R.id.bestScore);
-        bestScore = sharedPref.getLong("bestScore",0);
-        if(bestScore == 0)
-        {
+        bestScore = sharedPref.getLong("bestScore", 0);
+        if (bestScore == 0) {
             bestScoreDisplay.setText("XXX");
         } else {
-            bestScoreDisplay.setText(bestScore+"");
+            bestScoreDisplay.setText(bestScore + "");
         }
         numberOfMines = getIntent().getIntExtra("numberOfMines", 10);
         cellsData = prepareGridData();
         mineCountDisplay = (TextView) this.findViewById(R.id.minecount);
-        mineCountDisplay.setText("0"+numberOfMines);
+        mineCountDisplay.setText("0" + numberOfMines);
         secondsCount = (TextView) this.findViewById(R.id.secondCount);
         secondsCount.setText("000");
         emoji = (ImageButton) this.findViewById(R.id.emoji);
@@ -97,9 +96,9 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         Vibrator vibe = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         CellViewHolder holder = (CellViewHolder) view.getTag();
         boolean hasWon = false;
-        if(!alreadyClicked){
+        if (!alreadyClicked) {
             alreadyClicked = true;
-            editor.putLong("startTime",new Date().getTime());
+            editor.putLong("startTime", new Date().getTime());
             editor.commit();
             startTimer();
         }
@@ -125,8 +124,11 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             vibe.vibrate(1000);
             emoji.setImageDrawable(
                     getApplicationContext().getResources().getDrawable(R.drawable.win128));
-            editor.putLong("bestScore",timeElapsed);
-            editor.commit();
+            if (sharedPref.getLong("bestScore", 0) == 0
+                    || sharedPref.getLong("bestScore", 0) > timeElapsed) {
+                editor.putLong("bestScore", timeElapsed);
+                editor.commit();
+            }
             Toast.makeText(this, "You Won!!!", Toast.LENGTH_LONG).show();
         }
         gridAdapter.notifyDataSetChanged();
@@ -137,13 +139,14 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         super.onPause();
         editor.putLong("timeBeforePause", timeElapsed);
         editor.commit();
-        if(timer != null) timer.cancel();
+        if (timer != null)
+            timer.cancel();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        editor.putLong("startTime",new Date().getTime());
+        editor.putLong("startTime", new Date().getTime());
         editor.commit();
         if (alreadyClicked) {
             startTimer();
@@ -152,7 +155,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void startTimer() {
-        if(alreadyClicked) {
+        if (alreadyClicked) {
             final long timerStartEpoch = sharedPref.getLong("startTime", 0);
             final long timeBeforePause = sharedPref.getLong("timeBeforePause", 0);
             timer = new Timer();
@@ -161,9 +164,9 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     long currentTime = new Date().getTime();
                     timeElapsed = ((currentTime - timerStartEpoch) / 1000) + timeBeforePause;
                     String displayTime = timeElapsed + "";
-                    if(displayTime.length()==1){
+                    if (displayTime.length() == 1) {
                         displayTime = "00" + displayTime;
-                    }else if(displayTime.length()==2){
+                    } else if (displayTime.length() == 2) {
                         displayTime = "0" + displayTime;
                     }
                     final String time = displayTime;
@@ -185,7 +188,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         List<Cell> cells = (List<Cell>) holder.getCell().getTag();
         if (!cells.get(i).isUncovered() && !cells.get(i).isFlagged()) {
             cells.get(i).setFlagged(true);
-        } else if(!cells.get(i).isUncovered() && cells.get(i).isFlagged()){
+        } else if (!cells.get(i).isUncovered() && cells.get(i).isFlagged()) {
             cells.get(i).setFlagged(false);
         }
         gridAdapter.notifyDataSetChanged();
@@ -519,11 +522,5 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
         return cells;
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.i("nitesh","onStop");
     }
 }

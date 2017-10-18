@@ -7,11 +7,12 @@ import android.view.View;
 import android.widget.Button;
 import com.example.priyagosain.minesweeper.R;
 
-/**
- * Created by lovish on 10/15/17.
- */
-
 public class StartActivity extends AppCompatActivity implements View.OnClickListener {
+
+    private static final int NUMBER_MINES_EASY = 10;
+    private static final int NUMBER_MINES_INTERMEDIATE = 16;
+    private static final int NUMBER_MINES_HARD = 22;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,19 +30,19 @@ public class StartActivity extends AppCompatActivity implements View.OnClickList
         switch (v.getId()) {
             case R.id.beginner: {
                 Intent intent = new Intent(this, GameActivity.class);
-                intent.putExtra("numberOfMines", 10);
+                intent.putExtra("numberOfMines", NUMBER_MINES_EASY);
                 startActivity(intent);
             }
                 break;
             case R.id.intermediate: {
                 Intent intent = new Intent(this, GameActivity.class);
-                intent.putExtra("numberOfMines", 16);
+                intent.putExtra("numberOfMines", NUMBER_MINES_INTERMEDIATE);
                 startActivity(intent);
                 break;
             }
             case R.id.advanced:{
                 Intent intent = new Intent(this, GameActivity.class);
-                intent.putExtra("numberOfMines", 22);
+                intent.putExtra("numberOfMines", NUMBER_MINES_HARD);
                 startActivity(intent);
                 break;
             }
