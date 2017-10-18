@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/backgroundGrey"
+    >
+
+    <TextView
+        android:layout_marginTop="50dp"
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="60dp"
+        android:text="MINESWEEPER"
+        android:textSize="45dp"
+        android:fontFamily="serif-monospace"
+        android:layout_gravity="center_horizontal"
+        android:textStyle="bold"
+        android:textColor="@color/white"
+        />
+
+    <Button
+        android:layout_marginTop="20dp"
+        android:elegantTextHeight="true"
+        android:id="@+id/beginner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:backgroundTint="@color/black"
+        android:text="BEGINNER"
+        android:textStyle="bold"
+        android:fontFamily="serif-monospace"
+        android:textColor="@color/white"
+        android:textSize="20dp" />
+
+    <Button
+        android:layout_marginTop="20dp"
+        android:id="@+id/intermediate"
+        android:elegantTextHeight="true"
+        android:textStyle="bold"
+        android:fontFamily="serif-monospace"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:backgroundTint="@color/black"
+        android:text="INTERMEDIATE"
+        android:textColor="@color/white"
+        android:textSize="20dp" />
+
+    <Button
+        android:layout_marginTop="20dp"
+        android:id="@+id/advanced"
+        android:elegantTextHeight="true"
+        android:textStyle="bold"
+        android:fontFamily="serif-monospace"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:backgroundTint="@color/black"
+        android:text="ADVANCED"
+        android:textColor="@color/white"
+        android:textSize="20dp" />
+
+</LinearLayout>
