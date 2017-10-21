@@ -2,10 +2,10 @@ package com.example.priyagosain.minesweeper.Activity;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.media.MediaPlayer;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.GridView;
@@ -17,13 +17,12 @@ import com.example.priyagosain.minesweeper.Adapter.CustomGridAdapter;
 import com.example.priyagosain.minesweeper.Model.Cell;
 import com.example.priyagosain.minesweeper.Model.CellViewHolder;
 import com.example.priyagosain.minesweeper.R;
+import com.example.priyagosain.minesweeper.Utils.PrepareGrid;
+import com.example.priyagosain.minesweeper.Utils.UncoverGrid;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -46,6 +45,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     private long timeElapsed;
     private Timer timer;
     private long bestScore;
+    private ImageButton soundButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,14 +57,29 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         editor.commit();
         setContentView(R.layout.activity_game);
         bestScoreDisplay = (TextView) this.findViewById(R.id.bestScore);
+        soundButton = (ImageButton) this.findViewById(R.id.soundButton);
         bestScore = sharedPref.getLong("bestScore", 0);
         if (bestScore == 0) {
             bestScoreDisplay.setText("XXX");
         } else {
-            bestScoreDisplay.setText(bestScore + "");
+            if(bestScore < 99)
+            {
+                bestScoreDisplay.setText("0" + bestScore);
+            } else {
+                bestScoreDisplay.setText(bestScore + "");
+            }
+        }
+        String soundValue = sharedPref.getString("soundValue",null);
+        if(soundValue == null) {
+            editor.putString("soundValue", String.valueOf(Boolean.TRUE));
+            editor.commit();
+        } else if(soundValue.equalsIgnoreCase("true")) {
+            soundButton.setImageDrawable(this.getResources().getDrawable(R.drawable.volumeon));
+        } else if(soundValue.equalsIgnoreCase("false")) {
+            soundButton.setImageDrawable(this.getResources().getDrawable(R.drawable.volumeoff));
         }
         numberOfMines = getIntent().getIntExtra("numberOfMines", 10);
-        cellsData = prepareGridData();
+        cellsData = PrepareGrid.prepareGridData(GRID_ROWS, GRID_COLUMNS, numberOfMines, cellsData);
         mineCountDisplay = (TextView) this.findViewById(R.id.minecount);
         mineCountDisplay.setText("0" + numberOfMines);
         secondsCount = (TextView) this.findViewById(R.id.secondCount);
@@ -74,6 +89,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         minegrid = (GridView) this.findViewById(R.id.minegrid);
         gridAdapter = new CustomGridAdapter(this, cellsData);
         minegrid.setAdapter(gridAdapter);
+        soundButton.setOnClickListener(this);
         minegrid.setOnItemClickListener(this);
         minegrid.setOnItemLongClickListener(this);
         Toast.makeText(this, "May the force be with you!!!", Toast.LENGTH_SHORT).show();
@@ -88,12 +104,25 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                 startActivity(getIntent());
                 break;
             }
+            case R.id.soundButton: {
+                String soundValue = sharedPref.getString("soundValue", "true");
+                if (soundValue.equalsIgnoreCase("true")) {
+                    editor.putString("soundValue", String.valueOf(Boolean.FALSE));
+                    editor.commit();
+                    soundButton.setImageDrawable(this.getResources().getDrawable(R.drawable.volumeoff));
+                } else if (soundValue.equalsIgnoreCase("false")) {
+                    editor.putString("soundValue", String.valueOf(Boolean.TRUE));
+                    editor.commit();
+                    soundButton.setImageDrawable(this.getResources().getDrawable(R.drawable.volumeon));
+                }
+            }
         }
     }
 
     @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
         Vibrator vibe = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        MediaPlayer mp = MediaPlayer.create(this, R.raw.beep);
         CellViewHolder holder = (CellViewHolder) view.getTag();
         boolean hasWon = false;
         if (!alreadyClicked) {
@@ -104,6 +133,9 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         }
         List<Cell> cells = (List<Cell>) holder.getCell().getTag();
         if (!cells.get(position).isClicked() && cells.get(position).isMined()) {
+            if(sharedPref.getString("soundValue", "true").equalsIgnoreCase("true")){
+                mp.start();
+            }
             minegrid.setOnItemClickListener(null);
             timer.cancel();
             vibe.vibrate(1000);
@@ -115,8 +147,11 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     getApplicationContext().getResources().getDrawable(R.drawable.lose128));
             Toast.makeText(this, "You Lose!!!", Toast.LENGTH_LONG).show();
         } else if (!cells.get(position).isClicked()) {
+            if(sharedPref.getString("soundValue", "true").equalsIgnoreCase("true")){
+                mp.start();
+            }
             vibe.vibrate(100);
-            cells = uncoverCells(cells, position);
+            cells = UncoverGrid.uncoverCells(GRID_ROWS, GRID_COLUMNS, cells, position);
         }
         if (checkWin(cells)) {
             minegrid.setOnItemClickListener(null);
@@ -195,143 +230,6 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         return true;
     }
 
-    private List<Cell> prepareGridData() {
-        Set<Integer> randomNumbers = new HashSet<>();
-        while (randomNumbers.size() < numberOfMines) {
-            randomNumbers.add(new Random().nextInt(GRID_ROWS * GRID_COLUMNS));
-        }
-        for (int row = 0; row < GRID_ROWS; row++) {
-            for (int column = 0; column < GRID_COLUMNS; column++) {
-                Cell cell = new Cell();
-                cell.setX(row);
-                cell.setY(column);
-                cell.setCellNumber((row * GRID_ROWS) + column);
-                if (randomNumbers.contains(cell.getCellNumber())) {
-                    cell.setMined(true);
-                    Log.i("MineInfo", cell.getCellNumber() + " " + cell.getX() + " " + cell.getY());
-                }
-                cellsData.add(cell);
-            }
-        }
-        for (int i = 0; i < GRID_ROWS * GRID_COLUMNS; i++) {
-            Cell cell = cellsData.get(i);
-            int cellNumber = cellsData.get(i).getCellNumber();
-            if (cell.isMined()) {
-                // updates 8 neighbor's
-                if ((cell.getX() > 0 && cell.getX() < GRID_ROWS - 1) && cell.getY() > 0
-                        && cell.getY() < GRID_COLUMNS - 1) {
-                    cellsData.get(cellNumber - GRID_ROWS - 1)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber - GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS).getMineCount()) + 1);
-                    cellsData.get(cellNumber - GRID_ROWS + 1)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS + 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber - 1)
-                            .setMineCount((cellsData.get(cellNumber - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + 1)
-                            .setMineCount((cellsData.get(cellNumber + 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS - 1)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS + 1)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS + 1).getMineCount()) + 1);
-                }
-                // updates  3 neighbor's
-                else if (cell.getX() == 0 && cell.getY() == 0) {
-                    cellsData.get(cellNumber + 1)
-                            .setMineCount((cellsData.get(cellNumber + 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS + 1)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS + 1).getMineCount()) + 1);
-                }
-                // updates 3 neighbor's
-                else if (cell.getX() == 0 && cell.getY() == GRID_COLUMNS - 1) {
-                    cellsData.get(cellNumber - 1)
-                            .setMineCount((cellsData.get(cellNumber - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS - 1)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS).getMineCount()) + 1);
-                }
-                // updates 3 neighbor's
-                else if (cell.getX() == GRID_ROWS - 1 && cell.getY() == 0) {
-                    cellsData.get(cellNumber - GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS).getMineCount()) + 1);
-                    cellsData.get(cellNumber - GRID_ROWS + 1)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS + 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + 1)
-                            .setMineCount((cellsData.get(cellNumber + 1).getMineCount()) + 1);
-                }
-                // updates 3 neighbor's
-                else if (cell.getX() == GRID_ROWS - 1 && cell.getY() == GRID_COLUMNS - 1) {
-                    cellsData.get(cellNumber - GRID_ROWS - 1)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber - GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS).getMineCount()) + 1);
-                    cellsData.get(cellNumber - 1)
-                            .setMineCount((cellsData.get(cellNumber - 1).getMineCount()) + 1);
-                }
-                // updates 5 neighbor's
-                else if (cell.getX() == 0 && cell.getY() > 0 && cell.getY() < GRID_COLUMNS - 1) {
-                    cellsData.get(cellNumber - 1)
-                            .setMineCount((cellsData.get(cellNumber - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + 1)
-                            .setMineCount((cellsData.get(cellNumber + 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS - 1)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS + 1)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS + 1).getMineCount()) + 1);
-                }
-                // updates 5 neighbor's
-                else if (cell.getX() == GRID_ROWS - 1 && cell.getY() > 0
-                        && cell.getY() < GRID_COLUMNS - 1) {
-                    cellsData.get(cellNumber - GRID_ROWS - 1)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber - GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS).getMineCount()) + 1);
-                    cellsData.get(cellNumber - GRID_ROWS + 1)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS + 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber - 1)
-                            .setMineCount((cellsData.get(cellNumber - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + 1)
-                            .setMineCount((cellsData.get(cellNumber + 1).getMineCount()) + 1);
-                }
-                // updates 5 neighbor's
-                else if (cell.getY() == 0 && cell.getX() > 0 && cell.getX() < GRID_ROWS - 1) {
-                    cellsData.get(cellNumber - GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS).getMineCount()) + 1);
-                    cellsData.get(cellNumber - GRID_ROWS + 1)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS + 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + 1)
-                            .setMineCount((cellsData.get(cellNumber + 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS + 1)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS + 1).getMineCount()) + 1);
-                }
-                // updates 5 neighbor's
-                else if (cell.getY() == GRID_COLUMNS - 1 && cell.getX() > 0
-                        && cell.getX() < GRID_ROWS - 1) {
-                    cellsData.get(cellNumber - GRID_ROWS - 1)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber - GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber - GRID_ROWS).getMineCount()) + 1);
-                    cellsData.get(cellNumber - 1)
-                            .setMineCount((cellsData.get(cellNumber - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS - 1)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS - 1).getMineCount()) + 1);
-                    cellsData.get(cellNumber + GRID_ROWS)
-                            .setMineCount((cellsData.get(cellNumber + GRID_ROWS).getMineCount()) + 1);
-                }
-            }
-        }
-        return cellsData;
-    }
-
     private boolean checkWin(List<Cell> cells) {
         boolean hasWon = false;
         int coveredCount = 0;
@@ -346,181 +244,5 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             hasWon = true;
         }
         return hasWon;
-    }
-
-    private List<Cell> uncoverCells(List<Cell> cells, int position) {
-        Cell cell = cells.get(position);
-        int cellNumber = cells.get(position).getCellNumber();
-        if ((cell.getX() > 0 && cell.getX() < GRID_ROWS - 1) && cell.getY() > 0
-                && cell.getY() < GRID_COLUMNS - 1 && !cell.isUncovered()) {
-            boolean hasMinedNeighbor =
-                    cells.get(cellNumber - GRID_ROWS - 1).isMined() || cells.get(cellNumber - GRID_ROWS)
-                            .isMined() || cells.get(cellNumber - GRID_ROWS + 1).isMined() || cells
-                            .get(cellNumber - 1).isMined() || cells.get(cellNumber + 1).isMined() || cells
-                            .get(cellNumber + GRID_ROWS - 1).isMined() || cells.get(cellNumber + GRID_ROWS)
-                            .isMined() || cells.get(cellNumber + GRID_ROWS + 1).isMined();
-            if (!hasMinedNeighbor) {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS - 1);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS + 1);
-                cells = uncoverCells(cells, cellNumber - 1);
-                cells = uncoverCells(cells, cellNumber + 1);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS - 1);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS + 1);
-            } else {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-            }
-        }
-        // updates  3 neighbor's
-        else if (cell.getX() == 0 && cell.getY() == 0 && !cell.isUncovered()) {
-            boolean hasMinedNeighbor =
-                    cells.get(cellNumber + 1).isMined() || cells.get(cellNumber + GRID_ROWS).isMined()
-                            || cells.get(cellNumber + GRID_ROWS + 1).isMined();
-            if (!hasMinedNeighbor) {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-                cells = uncoverCells(cells, cellNumber + 1);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS + 1);
-            } else {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-            }
-        }
-        // updates 3 neighbor's
-        else if (cell.getX() == 0 && cell.getY() == GRID_COLUMNS - 1 && !cell.isUncovered()) {
-            boolean hasMinedNeighbor =
-                    cells.get(cellNumber - 1).isMined() || cells.get(cellNumber + GRID_ROWS - 1).isMined()
-                            || cells.get(cellNumber + GRID_ROWS).isMined();
-            if (!hasMinedNeighbor) {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-                cells = uncoverCells(cells, cellNumber - 1);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS - 1);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS);
-            } else {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-            }
-        }
-        // updates 3 neighbor's
-        else if (cell.getX() == GRID_ROWS - 1 && cell.getY() == 0 && !cell.isUncovered()) {
-            boolean hasMinedNeighbor =
-                    cells.get(cellNumber - GRID_ROWS).isMined() || cells.get(cellNumber - GRID_ROWS + 1)
-                            .isMined() || cells.get(cellNumber + 1).isMined();
-            if (!hasMinedNeighbor) {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS + 1);
-                cells = uncoverCells(cells, cellNumber + 1);
-            } else {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-            }
-        }
-        // updates 3 neighbor's
-        else if (cell.getX() == GRID_ROWS - 1 && cell.getY() == GRID_COLUMNS - 1 && !cell
-                .isUncovered()) {
-            boolean hasMinedNeighbor =
-                    cells.get(cellNumber - GRID_ROWS - 1).isMined() || cells.get(cellNumber - GRID_ROWS)
-                            .isMined() || cells.get(cellNumber - 1).isMined();
-            if (!hasMinedNeighbor) {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS - 1);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS);
-                cells = uncoverCells(cells, cellNumber - 1);
-            } else {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-            }
-        }
-        // updates 5 neighbor's
-        else if (cell.getX() == 0 && cell.getY() > 0 && cell.getY() < GRID_COLUMNS - 1 && !cell
-                .isUncovered()) {
-            boolean hasMinedNeighbor =
-                    cells.get(cellNumber - 1).isMined() || cells.get(cellNumber + 1).isMined() || cells
-                            .get(cellNumber + GRID_ROWS - 1).isMined() || cells.get(cellNumber + GRID_ROWS)
-                            .isMined() || cells.get(cellNumber + GRID_ROWS + 1).isMined();
-            if (!hasMinedNeighbor) {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-                cells = uncoverCells(cells, cellNumber - 1);
-                cells = uncoverCells(cells, cellNumber + 1);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS - 1);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS + 1);
-            } else {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-            }
-        }
-        // updates 5 neighbor's
-        else if (cell.getX() == GRID_ROWS - 1 && cell.getY() > 0 && cell.getY() < GRID_COLUMNS - 1
-                && !cell.isUncovered()) {
-            boolean hasMinedNeighbor =
-                    cells.get(cellNumber - GRID_ROWS - 1).isMined() || cells.get(cellNumber - GRID_ROWS)
-                            .isMined() || cells.get(cellNumber - GRID_ROWS + 1).isMined() || cells
-                            .get(cellNumber - 1).isMined() || cells.get(cellNumber + 1).isMined();
-            if (!hasMinedNeighbor) {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS - 1);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS + 1);
-                cells = uncoverCells(cells, cellNumber - 1);
-                cells = uncoverCells(cells, cellNumber + 1);
-            } else {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-            }
-        }
-        // updates 5 neighbor's
-        else if (cell.getY() == 0 && cell.getX() > 0 && cell.getX() < GRID_ROWS - 1 && !cell
-                .isUncovered()) {
-            boolean hasMinedNeighbor =
-                    cells.get(cellNumber - GRID_ROWS).isMined() || cells.get(cellNumber - GRID_ROWS + 1)
-                            .isMined() || cells.get(cellNumber + 1).isMined() || cells.get(cellNumber + GRID_ROWS)
-                            .isMined() || cells.get(cellNumber + GRID_ROWS + 1).isMined();
-            if (!hasMinedNeighbor) {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS + 1);
-                cells = uncoverCells(cells, cellNumber + 1);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS + 1);
-            } else {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-            }
-        }
-        // updates 5 neighbor's
-        else if (cell.getY() == GRID_COLUMNS - 1 && cell.getX() > 0 && cell.getX() < GRID_ROWS - 1
-                && !cell.isUncovered()) {
-            boolean hasMinedNeighbor =
-                    cells.get(cellNumber - GRID_ROWS - 1).isMined() || cells.get(cellNumber - GRID_ROWS)
-                            .isMined() || cells.get(cellNumber - 1).isMined() || cells
-                            .get(cellNumber + GRID_ROWS - 1).isMined() || cells.get(cellNumber + GRID_ROWS)
-                            .isMined();
-            if (!hasMinedNeighbor) {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS - 1);
-                cells = uncoverCells(cells, cellNumber - GRID_ROWS);
-                cells = uncoverCells(cells, cellNumber - 1);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS - 1);
-                cells = uncoverCells(cells, cellNumber + GRID_ROWS);
-            } else {
-                cell.setUncovered(true);
-                cell.setClicked(true);
-            }
-        }
-        return cells;
     }
 }

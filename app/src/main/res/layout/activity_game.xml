@@ -17,7 +17,6 @@
          android:layout_height="match_parent"
          android:layout_weight="4"
          android:layout_marginLeft="8dp"
-         android:layout_marginBottom="8dp"
          android:layout_marginRight="8dp"
          android:layout_marginTop="8dp"
          android:background="@color/backgroundGrey"
@@ -36,7 +35,9 @@
              android:textStyle="bold"
              android:fontFamily="serif-monospace"
              android:textSize="40dp"
-             android:text="32"
+             android:text="000"
+             android:foreground="?android:attr/selectableItemBackground"
+             android:clickable="true"
              android:textColor="@color/red"
              android:background="@color/black"
              />
@@ -46,7 +47,6 @@
             android:layout_height="match_parent"
             android:layout_weight="3"
             android:layout_marginRight="8dp"
-            android:layout_marginBottom="8dp"
             android:layout_marginTop="8dp"
             android:background="@color/backgroundGrey"
             android:elevation="5dp"
@@ -65,7 +65,6 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="4"
-            android:layout_marginBottom="8dp"
             android:layout_marginRight="8dp"
             android:layout_marginTop="8dp"
             android:background="@color/backgroundGrey"
@@ -84,7 +83,9 @@
                 android:textStyle="bold"
                 android:layout_gravity="center"
                 android:textSize="40dp"
-                android:text="332"
+                android:text="000"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:clickable="true"
                 android:textColor="@color/red"
                 android:background="@color/black"
                 />
@@ -118,12 +119,19 @@
         android:layout_weight="1.8"
         android:background="@color/lightblue"
         >
+
         <ImageButton
+            android:id="@+id/soundButton"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:id="@+id/soundButton"
             android:layout_weight="1"
-            />
+            android:scaleX="1.30"
+            android:scaleY="1.30"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:src="@drawable/volumeon"
+            android:background="@color/black" />
+
      <TextView
          android:layout_width="0dp"
          android:layout_height="match_parent"
@@ -135,6 +143,8 @@
          android:fontFamily="serif-monospace"
          android:textStyle="bold"
          android:textColor="@color/red"
+         android:foreground="?android:attr/selectableItemBackground"
+         android:clickable="true"
          android:layout_weight="1"
          />
     </LinearLayout>
